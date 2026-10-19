@@ -1,0 +1,56 @@
+services:
+  app:
+    build: .
+    env_file: .env
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: http://localhost:8000
+      DB_HOST: db
+      DB_PORT: 5432
+      OLLAMA_URL: ${DOCKER_OLLAMA_URL:-http://host.docker.internal:11434}
+      RUN_MIGRATIONS: "true"
+    ports:
+      - "8000:80"
+    volumes:
+      - storage:/var/www/html/storage/app
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    depends_on:
+      db:
+        condition: service_healthy
+
+  queue:
+    build: .
+    command: ["su", "-s", "/bin/sh", "www-data", "-c", "php artisan queue:work"]
+    env_file: .env
+    environment:
+      APP_ENV: production
+      DB_HOST: db
+      DB_PORT: 5432
+      OLLAMA_URL: ${DOCKER_OLLAMA_URL:-http://host.docker.internal:11434}
+    volumes:
+      - storage:/var/www/html/storage/app
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    depends_on:
+      app:
+        condition: service_started
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-invoice_flow}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  storage:
+  pgdata:
