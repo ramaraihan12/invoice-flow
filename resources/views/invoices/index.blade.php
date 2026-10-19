@@ -29,7 +29,7 @@
         </div>
     </div>
 
-    <div class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
+    <div @class(['mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4', 'lg:grid-cols-5' => count($tabs) === 5])>
         @foreach ($tabs as $tab)
             @php $active = $status === $tab; @endphp
             <a href="{{ route('invoices.index', $active ? [] : ['status' => $tab->value]) }}" @class([
