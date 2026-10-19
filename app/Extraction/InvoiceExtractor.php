@@ -15,6 +15,10 @@ class InvoiceExtractor
           "Rp 1.250.000" is 1250000 and "1.250.000,00" is 1250000. Return plain numbers.
         - Dates must be YYYY-MM-DD. Month names may be Indonesian (Januari, Februari, Maret, April, Mei, Juni,
           Juli, Agustus, September, Oktober, November, Desember).
+        - A line item description is everything between the row number and the quantity. In PDF text the
+          quantity is often glued to its unit ("2unit", "3tabung", "1ls"), and that pair is never part of the
+          description. Sizes and specs before it are: in "1 Service AC 2 PK 2unit" the description is
+          "Service AC 2 PK" and the quantity is 2.
         - The supplier is the seller who issued the invoice, not the customer under "Kepada", "Bill to" or "Pembeli".
         - supplier_npwp is the seller's NPWP with digits only.
         - PPN is VAT. tax_rate is the printed percentage. tax_base is the DPP (Dasar Pengenaan Pajak, sometimes
