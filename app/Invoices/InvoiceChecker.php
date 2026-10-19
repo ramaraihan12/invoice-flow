@@ -53,8 +53,10 @@ class InvoiceChecker
             return null;
         }
 
+        // Only earlier uploads count. Otherwise re-checking the original after
+        // a resend arrives would flag the original too.
         $query = Invoice::query()
-            ->whereKeyNot($invoice->getKey())
+            ->when($invoice->exists, fn ($query) => $query->where('id', '<', $invoice->getKey()))
             ->where('status', '!=', InvoiceStatus::Failed)
             ->where('invoice_number', $invoice->invoice_number);
 

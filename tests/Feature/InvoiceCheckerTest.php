@@ -50,6 +50,13 @@ it('flags the same number from the same supplier', function () {
         ->and($flags[0]->message)->toContain("upload #{$first->id}");
 });
 
+it('does not flag the original once the resend arrives', function () {
+    $original = Invoice::factory()->extracted()->create();
+    Invoice::factory()->extracted()->create(['invoice_number' => $original->invoice_number]);
+
+    expect(flagCodes($original))->toBe([]);
+});
+
 it('allows two suppliers to use the same number', function () {
     $first = Invoice::factory()->extracted()->create(['invoice_number' => 'INV-001']);
     $other = Invoice::factory()->extracted()->create(['invoice_number' => 'INV-001', 'supplier_npwp' => '9876543210987000']);
