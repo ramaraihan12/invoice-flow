@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
@@ -15,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $attempts
  * @property ?int $response_status
  * @property ?string $last_error
- * @property ?\Illuminate\Support\Carbon $delivered_at
+ * @property ?Carbon $delivered_at
  */
 class WebhookDelivery extends Model
 {

@@ -8,6 +8,7 @@ use Database\Factories\InvoiceFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 /**
@@ -20,8 +21,8 @@ use Illuminate\Support\Collection;
  * @property ?string $supplier_name
  * @property ?string $supplier_npwp
  * @property ?string $invoice_number
- * @property ?\Illuminate\Support\Carbon $invoice_date
- * @property ?\Illuminate\Support\Carbon $due_date
+ * @property ?Carbon $invoice_date
+ * @property ?Carbon $due_date
  * @property string $currency
  * @property ?list<array{description: ?string, quantity: ?float, unit_price: ?int, amount: ?int}> $line_items
  * @property ?int $subtotal
@@ -33,9 +34,9 @@ use Illuminate\Support\Collection;
  * @property ?array<string, mixed> $raw_extraction
  * @property ?string $extracted_with
  * @property ?string $error
- * @property ?\Illuminate\Support\Carbon $extracted_at
- * @property ?\Illuminate\Support\Carbon $approved_at
- * @property ?\Illuminate\Support\Carbon $exported_at
+ * @property ?Carbon $extracted_at
+ * @property ?Carbon $approved_at
+ * @property ?Carbon $exported_at
  */
 class Invoice extends Model
 {
