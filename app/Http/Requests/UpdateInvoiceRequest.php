@@ -38,6 +38,23 @@ class UpdateInvoiceRequest extends FormRequest
     }
 
     /**
+     * @return array<string, string>
+     */
+    public function attributes(): array
+    {
+        return [
+            'items.*.description' => 'line item description',
+            'items.*.quantity' => 'line item quantity',
+            'items.*.unit_price' => 'line item unit price',
+            'items.*.amount' => 'line item amount',
+            'supplier_npwp' => 'NPWP',
+            'tax_base' => 'tax base',
+            'tax_rate' => 'tax rate',
+            'tax_amount' => 'tax amount',
+        ];
+    }
+
+    /**
      * Reviewers type amounts the way they read them ("Rp 1.250.000"), so
      * strip the formatting before validating.
      */
@@ -62,7 +79,6 @@ class UpdateInvoiceRequest extends FormRequest
                 'unit_price' => $this->cleanMoney($item['unit_price'] ?? null),
                 'amount' => $this->cleanMoney($item['amount'] ?? null),
             ])
-            ->values()
             ->all();
 
         $this->merge($clean);

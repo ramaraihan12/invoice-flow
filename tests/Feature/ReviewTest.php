@@ -217,3 +217,17 @@ it('serves the original file inline', function () {
         ->assertHeader('Content-Type', 'application/pdf')
         ->assertHeader('Content-Disposition', 'inline; filename=nota.pdf');
 });
+
+it('reports line item errors under the row the reviewer typed in', function () {
+    $invoice = Invoice::factory()->extracted()->create();
+    $items = [
+        1 => ['description' => 'Lakban', 'quantity' => 1, 'unit_price' => 1000, 'amount' => 'abc'],
+        3 => ['description' => 'Kardus', 'quantity' => 1, 'unit_price' => 1000, 'amount' => 1000],
+    ];
+
+    $response = $this->from("/invoices/{$invoice->id}")
+        ->put("/invoices/{$invoice->id}", reviewForm($invoice, ['items' => $items]))
+        ->assertSessionHasErrors('items.1.amount');
+
+    expect(session('errors')->first('items.1.amount'))->toBe('The line item amount field must be an integer.');
+});
