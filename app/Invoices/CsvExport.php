@@ -61,9 +61,9 @@ class CsvExport
         foreach ($invoices as $invoice) {
             fputcsv($handle, [
                 $invoice->id,
-                $invoice->supplier_name,
-                $invoice->supplier_npwp,
-                $invoice->invoice_number,
+                $this->safe($invoice->supplier_name),
+                $this->safe($invoice->supplier_npwp),
+                $this->safe($invoice->invoice_number),
                 $invoice->invoice_date?->toDateString(),
                 $invoice->due_date?->toDateString(),
                 $invoice->currency,
@@ -82,5 +82,13 @@ class CsvExport
         fclose($handle);
 
         return $csv;
+    }
+
+    /**
+     * Text comes from supplier documents, so stop spreadsheets from reading it as a formula.
+     */
+    private function safe(?string $value): ?string
+    {
+        return $value !== null && preg_match('/^[=+\-@	]/', $value) ? "'".$value : $value;
     }
 }
