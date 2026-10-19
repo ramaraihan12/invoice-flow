@@ -31,12 +31,18 @@ final class IndonesianNumber
         return is_numeric($value) ? (float) $value : null;
     }
 
-    public static function format(int|float $value): string
+    /**
+     * Ungrouped output is for form fields holding quantities and rates, where
+     * "1.000" would read back as one instead of a thousand.
+     */
+    public static function format(int|float $value, bool $grouped = true): string
     {
+        $thousands = $grouped ? '.' : '';
+
         if (floor($value) === (float) $value) {
-            return number_format($value, 0, ',', '.');
+            return number_format($value, 0, ',', $thousands);
         }
 
-        return rtrim(rtrim(number_format($value, 2, ',', '.'), '0'), ',');
+        return rtrim(rtrim(number_format($value, 2, ',', $thousands), '0'), ',');
     }
 }
