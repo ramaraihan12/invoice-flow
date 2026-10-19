@@ -1,59 +1,84 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Invoice Flow
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+[![ci](https://github.com/ramaraihan12/invoice-flow/actions/workflows/ci.yml/badge.svg)](https://github.com/ramaraihan12/invoice-flow/actions/workflows/ci.yml)
 
-## About Laravel
+Upload a supplier invoice (PDF or photo), let an LLM pull the fields out, and have a person check anything that looks off before it goes to accounting. Built around Indonesian invoices: rupiah amounts, supplier NPWP, PPN, jatuh tempo.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+![Review screen](docs/review.png)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+That screenshot is a real run: `qwen3.5-9b` on Ollama read the sample PDF on the left. The sample has a line total that does not match 3 x 1.450.000, so the invoice lands in review with the line highlighted.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## How it works
 
-## Learning Laravel
+- An upload is stored and a queued job reads it. Text PDFs go through `smalot/pdfparser`. Photos are sent to the model as images, but only if `INVOICE_LLM_VISION=true`.
+- The text goes to the model through [Prism](https://prismphp.com) with a schema, so what comes back is a typed structure, not free text.
+- A checker runs on the result and raises flags: line items that don't add up, PPN that doesn't match the rate, total that doesn't match, missing invoice number, bad NPWP length, and the same invoice number twice for one supplier.
+- Everything lands in a review queue. You fix the fields next to the original file and approve. Flagged invoices need a tick on "approve anyway".
+- Approving queues a webhook POST (retries with backoff, up to 6 tries). The body is signed with HMAC-SHA256 in `X-Invoice-Flow-Signature`, computed over `timestamp.body`. The timestamp is in `X-Invoice-Flow-Timestamp`.
+- "Export approved to CSV" writes all approved invoices to one file and marks them exported.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+## Stack
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- PHP 8.4, Laravel 12, PostgreSQL, database queue
+- Prism PHP: Ollama by default, or OpenAI, Gemini, Anthropic
+- Blade + Tailwind 4 via Vite
+- Pest, Pint, GitHub Actions, Docker
 
-## Laravel Sponsors
+## Run it
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+You need PHP 8.4, Composer, Node, a Postgres database and [Ollama](https://ollama.com) with a model pulled.
 
-### Premium Partners
+```bash
+createdb invoice_flow            # or create it however you like
+composer setup                   # installs, copies .env, runs migrations, builds assets
+```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+Edit `.env`: set the `DB_*` values and `INVOICE_LLM_MODEL` to a model you have pulled. Then run the web server and the queue worker in two terminals:
 
-## Contributing
+```bash
+php artisan serve
+php artisan queue:work --timeout=0
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Open http://localhost:8000 and upload the PDFs from `samples/`. A 9B model on a laptop GPU can take a minute or two per invoice.
 
-## Code of Conduct
+To use a hosted model, change these in `.env`:
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+| Variable | Meaning |
+| --- | --- |
+| `INVOICE_LLM_PROVIDER` | `ollama`, `openai`, `gemini` or `anthropic` |
+| `INVOICE_LLM_MODEL` | model name for that provider |
+| `INVOICE_LLM_VISION` | `true` if the model can read images |
+| `OPENAI_API_KEY`, `GEMINI_API_KEY`, `ANTHROPIC_API_KEY` | key for the provider you picked |
+| `INVOICE_WEBHOOK_URL`, `INVOICE_WEBHOOK_SECRET` | where approved invoices are sent, and the signing secret |
 
-## Security Vulnerabilities
+Everything else is in `.env.example`.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+With Docker (web, queue worker and Postgres; Ollama stays on your host):
 
-## License
+```bash
+cp .env.example .env
+php artisan key:generate --show   # paste the value into APP_KEY in .env
+docker compose up --build
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+The app is on http://localhost:8000. If your Ollama is somewhere else, set `DOCKER_OLLAMA_URL`.
+
+The sample PDFs were made with `php artisan samples:generate`. All companies and numbers in them are made up. Two have deliberate mistakes and one is a resend of another, so each check has something to catch.
+
+## Tests
+
+```bash
+vendor/bin/pest
+vendor/bin/pint --test
+```
+
+The tests use `Prism::fake()` and `Http::fake()`, so they need no model and no API key. Locally they run on in-memory SQLite (needs `pdo_sqlite`). CI runs the same two commands against a Postgres service.
+
+## Notes
+
+- Quality depends on the model. A small local model misreads things now and then, which is why nothing is exported without a person approving it.
+- Scanned PDFs without a text layer are rejected with a clear message. Send them as photos to a vision model instead, there is no OCR step.
+- Currency is assumed to be IDR and amounts are whole rupiah.
+- No login. It is meant to run on a private network. Add auth before putting it on the internet.
+- Next: a Tesseract fallback for scanned PDFs, and per-supplier rules for known layouts.
