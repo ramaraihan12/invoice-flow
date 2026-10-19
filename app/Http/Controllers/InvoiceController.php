@@ -108,6 +108,10 @@ class InvoiceController extends Controller
         }
 
         DB::transaction(function () use ($invoice): void {
+            // A double click sends two requests at once, so check again under a lock.
+            $current = Invoice::query()->whereKey($invoice->getKey())->lockForUpdate()->first();
+            abort_unless($current?->isEditable(), 409, 'This invoice was already approved or changed. Reload the page.');
+
             $invoice->status = InvoiceStatus::Approved;
             $invoice->approved_at = now();
             $invoice->save();
