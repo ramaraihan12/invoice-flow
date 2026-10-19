@@ -46,7 +46,7 @@ class DeliverWebhook implements ShouldQueue
         $secret = (string) config('invoices.webhook.secret');
 
         if ($secret !== '') {
-            // Signing the timestamp too means a captured request can't be replayed later.
+            // Signing the timestamp too lets receivers reject old, replayed requests.
             $headers['X-Invoice-Flow-Signature'] = 'sha256='.hash_hmac('sha256', "{$timestamp}.{$body}", $secret);
         }
 

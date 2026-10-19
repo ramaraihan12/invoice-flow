@@ -14,7 +14,7 @@ That screenshot is a real run: `qwen3.5-9b` on Ollama read the sample PDF on the
 - The text goes to the model through [Prism](https://prismphp.com) with a schema, so what comes back is a typed structure, not free text.
 - A checker runs on the result and raises flags: line items that don't add up, PPN that doesn't match the rate, total that doesn't match, missing invoice number, bad NPWP length, and the same invoice number twice for one supplier.
 - Everything lands in a review queue. You fix the fields next to the original file and approve. Flagged invoices need a tick on "approve anyway".
-- Approving queues a webhook POST (retries with backoff, up to 6 tries). The body is signed with HMAC-SHA256 in `X-Invoice-Flow-Signature`, computed over `timestamp.body`. The timestamp is in `X-Invoice-Flow-Timestamp`.
+- Approving queues a webhook POST (retries with backoff, up to 6 tries). The body is signed with HMAC-SHA256 in `X-Invoice-Flow-Signature`, computed over `timestamp.body`. The timestamp is in `X-Invoice-Flow-Timestamp`. Receivers should check the signature and reject timestamps older than about 5 minutes.
 - "Export approved to CSV" writes all approved invoices to one file and marks them exported.
 
 ## Stack
@@ -30,10 +30,16 @@ You need PHP 8.4, Composer, Node, a Postgres database and [Ollama](https://ollam
 
 ```bash
 createdb invoice_flow            # or create it however you like
-composer setup                   # installs, copies .env, runs migrations, builds assets
+cp .env.example .env
 ```
 
-Edit `.env`: set the `DB_*` values and `INVOICE_LLM_MODEL` to a model you have pulled. Then run the web server and the queue worker in two terminals:
+Edit `.env`: set the `DB_*` values and `INVOICE_LLM_MODEL` to a model you have pulled. Then install and migrate (safe to rerun if it stops halfway):
+
+```bash
+composer setup                   # installs, generates the key, runs migrations, builds assets
+```
+
+Run the web server and the queue worker in two terminals:
 
 ```bash
 php artisan serve
@@ -58,7 +64,7 @@ With Docker (web, queue worker and Postgres; Ollama stays on your host):
 
 ```bash
 cp .env.example .env
-php artisan key:generate --show   # paste the value into APP_KEY in .env
+echo "APP_KEY=base64:$(openssl rand -base64 32)"   # paste into .env, replacing the empty APP_KEY
 docker compose up --build
 ```
 
