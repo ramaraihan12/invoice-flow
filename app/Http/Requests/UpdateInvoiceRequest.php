@@ -14,6 +14,8 @@ class UpdateInvoiceRequest extends FormRequest
     public function rules(): array
     {
         $money = ['nullable', 'integer', 'min:0', 'max:999999999999999'];
+        // Discount lines are printed as negative amounts.
+        $lineMoney = ['nullable', 'integer', 'min:-999999999999999', 'max:999999999999999'];
 
         return [
             'supplier_name' => ['nullable', 'string', 'max:255'],
@@ -24,8 +26,8 @@ class UpdateInvoiceRequest extends FormRequest
             'items' => ['array', 'max:200'],
             'items.*.description' => ['nullable', 'string', 'max:500'],
             'items.*.quantity' => ['nullable', 'numeric', 'min:0'],
-            'items.*.unit_price' => $money,
-            'items.*.amount' => $money,
+            'items.*.unit_price' => $lineMoney,
+            'items.*.amount' => $lineMoney,
             'subtotal' => $money,
             'tax_base' => $money,
             'tax_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],

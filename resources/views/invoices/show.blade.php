@@ -123,6 +123,18 @@
 
                     <fieldset class="rounded-lg border border-slate-200 bg-white p-4 shadow-xs">
                         <legend class="px-1 text-xs font-medium uppercase tracking-wide text-slate-500">Line items</legend>
+                        @if ($errors->has('items') || $errors->has('items.*'))
+                            <ul class="mb-2 space-y-0.5 text-xs text-rose-600">
+                                @foreach ($errors->get('items.*') as $messages)
+                                    @foreach ($messages as $message)
+                                        <li>{{ $message }}</li>
+                                    @endforeach
+                                @endforeach
+                                @foreach ($errors->get('items') as $message)
+                                    <li>{{ $message }}</li>
+                                @endforeach
+                            </ul>
+                        @endif
                         <div class="overflow-x-auto">
                             <table class="w-full min-w-[34rem] text-sm">
                                 <thead class="text-left text-xs text-slate-500">
@@ -140,10 +152,10 @@
                                     @foreach ($items as $i => $item)
                                         @php $rowFlagged = $invoice->isFlagged("line_items.{$i}") || $invoice->isFlagged('line_items'); @endphp
                                         <tr data-item>
-                                            <td class="py-1 pr-2"><input name="items[{{ $i }}][description]" value="{{ $item['description'] }}" @disabled(! $editable) @class([$input, 'border-amber-400 bg-amber-50' => $rowFlagged, 'border-slate-300 bg-white' => ! $rowFlagged])></td>
-                                            <td class="py-1 pr-2"><input name="items[{{ $i }}][quantity]" value="{{ $item['quantity'] }}" inputmode="decimal" @disabled(! $editable) @class([$input, 'text-right tabular-nums', 'border-amber-400 bg-amber-50' => $rowFlagged, 'border-slate-300 bg-white' => ! $rowFlagged])></td>
-                                            <td class="py-1 pr-2"><input name="items[{{ $i }}][unit_price]" value="{{ $item['unit_price'] }}" inputmode="numeric" @disabled(! $editable) @class([$input, 'text-right tabular-nums', 'border-amber-400 bg-amber-50' => $rowFlagged, 'border-slate-300 bg-white' => ! $rowFlagged])></td>
-                                            <td class="py-1 pr-2"><input name="items[{{ $i }}][amount]" value="{{ $item['amount'] }}" inputmode="numeric" @disabled(! $editable) @class([$input, 'text-right tabular-nums', 'border-amber-400 bg-amber-50' => $rowFlagged, 'border-slate-300 bg-white' => ! $rowFlagged])></td>
+                                            <td class="py-1 pr-2"><input name="items[{{ $i }}][description]" value="{{ $item['description'] }}" @disabled(! $editable) @class([$input, 'border-rose-400 bg-white' => $errors->has("items.{$i}.description"), 'border-amber-400 bg-amber-50' => $rowFlagged && ! $errors->has("items.{$i}.description"), 'border-slate-300 bg-white' => ! $rowFlagged && ! $errors->has("items.{$i}.description")])></td>
+                                            <td class="py-1 pr-2"><input name="items[{{ $i }}][quantity]" value="{{ $item['quantity'] }}" inputmode="decimal" @disabled(! $editable) @class([$input, 'text-right tabular-nums', 'border-rose-400 bg-white' => $errors->has("items.{$i}.quantity"), 'border-amber-400 bg-amber-50' => $rowFlagged && ! $errors->has("items.{$i}.quantity"), 'border-slate-300 bg-white' => ! $rowFlagged && ! $errors->has("items.{$i}.quantity")])></td>
+                                            <td class="py-1 pr-2"><input name="items[{{ $i }}][unit_price]" value="{{ $item['unit_price'] }}" inputmode="numeric" @disabled(! $editable) @class([$input, 'text-right tabular-nums', 'border-rose-400 bg-white' => $errors->has("items.{$i}.unit_price"), 'border-amber-400 bg-amber-50' => $rowFlagged && ! $errors->has("items.{$i}.unit_price"), 'border-slate-300 bg-white' => ! $rowFlagged && ! $errors->has("items.{$i}.unit_price")])></td>
+                                            <td class="py-1 pr-2"><input name="items[{{ $i }}][amount]" value="{{ $item['amount'] }}" inputmode="numeric" @disabled(! $editable) @class([$input, 'text-right tabular-nums', 'border-rose-400 bg-white' => $errors->has("items.{$i}.amount"), 'border-amber-400 bg-amber-50' => $rowFlagged && ! $errors->has("items.{$i}.amount"), 'border-slate-300 bg-white' => ! $rowFlagged && ! $errors->has("items.{$i}.amount")])></td>
                                             @if ($editable)
                                                 <td class="py-1 text-right"><button type="button" data-remove-item class="rounded px-1.5 text-slate-400 hover:bg-slate-100 hover:text-rose-600" title="Remove line">&times;</button></td>
                                             @endif
