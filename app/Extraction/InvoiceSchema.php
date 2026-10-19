@@ -19,7 +19,7 @@ final class InvoiceSchema
             name: 'line_item',
             description: 'One row of the item table',
             properties: [
-                new StringSchema('description', 'Item or service name as printed', nullable: true),
+                new StringSchema('description', 'Item or service name as printed, including sizes and specs such as "2 PK" or "10.9 kg"', nullable: true),
                 new NumberSchema('quantity', 'Quantity as printed', nullable: true),
                 new NumberSchema('unit_price', 'Price per unit in rupiah', nullable: true),
                 new NumberSchema('amount', 'Line total in rupiah as printed', nullable: true),
