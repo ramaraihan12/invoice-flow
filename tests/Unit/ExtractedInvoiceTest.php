@@ -53,3 +53,14 @@ it('drops values it cannot trust', function () {
         ->and($invoice->currency)->toBe('IDR')
         ->and($invoice->lineItems)->toBe([['description' => 'Ongkir', 'quantity' => 1.5, 'unit_price' => null, 'amount' => null]]);
 });
+
+it('falls back to IDR when the currency is not a three letter code', function () {
+    expect(ExtractedInvoice::fromArray(sampleExtraction(['currency' => 'Rupiah']))->currency)->toBe('IDR')
+        ->and(ExtractedInvoice::fromArray(sampleExtraction(['currency' => 'usd']))->currency)->toBe('USD')
+        ->and(ExtractedInvoice::fromArray(sampleExtraction(['currency' => null]))->currency)->toBe('IDR');
+});
+
+it('drops a tax rate outside 0 to 100', function () {
+    expect(ExtractedInvoice::fromArray(sampleExtraction(['tax_rate' => 1200]))->taxRate)->toBeNull()
+        ->and(ExtractedInvoice::fromArray(sampleExtraction(['tax_rate' => 11]))->taxRate)->toBe(11.0);
+});

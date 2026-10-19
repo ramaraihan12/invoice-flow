@@ -42,7 +42,7 @@ final readonly class ExtractedInvoice
             invoiceNumber: self::text($data['invoice_number'] ?? null),
             invoiceDate: self::date($data['invoice_date'] ?? null),
             dueDate: self::date($data['due_date'] ?? null),
-            currency: strtoupper(self::text($data['currency'] ?? null) ?? 'IDR'),
+            currency: self::currency($data['currency'] ?? null),
             lineItems: array_values(array_map(fn (mixed $item): array => [
                 'description' => self::text($item['description'] ?? null),
                 'quantity' => self::quantity($item['quantity'] ?? null),
@@ -51,7 +51,7 @@ final readonly class ExtractedInvoice
             ], array_filter($items, is_array(...)))),
             subtotal: self::money($data['subtotal'] ?? null),
             taxBase: self::money($data['tax_base'] ?? null),
-            taxRate: IndonesianNumber::parse($data['tax_rate'] ?? null),
+            taxRate: self::taxRate($data['tax_rate'] ?? null),
             taxAmount: self::money($data['tax_amount'] ?? null),
             total: self::money($data['total'] ?? null),
         );
@@ -87,6 +87,20 @@ final readonly class ExtractedInvoice
         $value = trim((string) $value);
 
         return $value === '' ? null : $value;
+    }
+
+    private static function currency(mixed $value): string
+    {
+        $code = strtoupper((string) self::text($value));
+
+        return preg_match('/^[A-Z]{3}$/', $code) ? $code : 'IDR';
+    }
+
+    private static function taxRate(mixed $value): ?float
+    {
+        $rate = IndonesianNumber::parse($value);
+
+        return $rate !== null && $rate >= 0 && $rate <= 100 ? $rate : null;
     }
 
     private static function npwp(mixed $value): ?string

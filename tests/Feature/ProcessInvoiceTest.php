@@ -139,3 +139,19 @@ it('marks the invoice failed when the provider keeps erroring', function () {
     expect($invoice->refresh()->status)->toBe(InvoiceStatus::Failed)
         ->and($invoice->error)->toBe('Connection refused');
 });
+
+it('keeps an npwp that is too long and flags it instead of failing', function () {
+    Prism::fake([StructuredResponseFake::make()->withStructured(sampleExtraction([
+        'supplier_npwp' => '0123456789012000123456',
+        'currency' => 'Rupiah',
+    ]))]);
+    $invoice = uploadedSample();
+
+    ProcessInvoice::dispatch($invoice);
+
+    $invoice->refresh();
+
+    expect($invoice->status)->toBe(InvoiceStatus::NeedsReview)
+        ->and($invoice->currency)->toBe('IDR')
+        ->and(collect($invoice->flags)->pluck('code'))->toContain('invalid_npwp');
+});
