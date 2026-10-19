@@ -155,7 +155,7 @@ it('will not approve with open flags unless told to', function () {
 it('locks invoices once they are approved', function () {
     $invoice = Invoice::factory()->approved()->create();
 
-    $this->put("/invoices/{$invoice->id}", reviewForm($invoice, ['total' => 1]))->assertConflict();
+    $this->put("/invoices/{$invoice->id}", reviewForm($invoice, ['total' => 1]))->assertConflict()->assertSee('Only invoices waiting for review can be edited.');
     $this->post("/invoices/{$invoice->id}/approve", reviewForm($invoice))->assertConflict();
     $this->delete("/invoices/{$invoice->id}")->assertConflict();
 
