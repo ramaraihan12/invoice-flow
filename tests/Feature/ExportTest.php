@@ -50,3 +50,13 @@ it('only serves files from the export folder', function () {
     $this->get('/exports/..%2Finvoices%2Fsecret.pdf')->assertNotFound();
     $this->get('/exports/invoices-2026-01-01-000000.csv')->assertNotFound();
 });
+
+it('neutralises spreadsheet formulas in exported text', function () {
+    Invoice::factory()->approved()->create(['supplier_name' => '=HYPERLINK("http://evil.test")', 'invoice_number' => '@SUM(1)']);
+
+    $this->post('/exports');
+
+    $csv = Storage::get('exports/'.session('download'));
+
+    expect($csv)->toContain("\"'=HYPERLINK(")->and($csv)->toContain("'@SUM(1)");
+});

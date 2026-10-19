@@ -97,6 +97,29 @@ it('rejects input that is not a number', function () {
         ->assertSessionHasErrors('total');
 });
 
+it('shows line item errors on the review page', function () {
+    $invoice = Invoice::factory()->extracted()->create();
+    $items = $invoice->line_items;
+    $items[0]['amount'] = 'abc';
+
+    $this->from("/invoices/{$invoice->id}")
+        ->put("/invoices/{$invoice->id}", reviewForm($invoice, ['items' => $items]))
+        ->assertRedirect("/invoices/{$invoice->id}")
+        ->assertSessionHasErrors('items.0.amount');
+
+    $this->get("/invoices/{$invoice->id}")->assertSee('border-rose-400', false);
+});
+
+it('accepts a negative discount line', function () {
+    $invoice = Invoice::factory()->extracted()->create();
+    $items = [...$invoice->line_items, ['description' => 'Diskon', 'quantity' => 1, 'unit_price' => '-50.000', 'amount' => '-50.000']];
+
+    $this->put("/invoices/{$invoice->id}", reviewForm($invoice, ['items' => $items]))
+        ->assertSessionHasNoErrors();
+
+    expect(collect($invoice->refresh()->line_items)->last()['amount'])->toBe(-50000);
+});
+
 it('approves a clean invoice and sends the webhook', function () {
     config(['invoices.webhook.url' => 'https://hooks.example.test/invoices']);
     $invoice = Invoice::factory()->extracted()->create();
