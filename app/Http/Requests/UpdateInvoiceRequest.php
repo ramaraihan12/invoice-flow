@@ -44,10 +44,10 @@ class UpdateInvoiceRequest extends FormRequest
         $clean = [];
 
         foreach (self::MONEY_FIELDS as $field) {
-            $clean[$field] = $this->money($this->input($field));
+            $clean[$field] = $this->cleanMoney($this->input($field));
         }
 
-        $clean['tax_rate'] = $this->decimal($this->input('tax_rate'));
+        $clean['tax_rate'] = $this->cleanDecimal($this->input('tax_rate'));
         $clean['supplier_npwp'] = $this->filled('supplier_npwp')
             ? preg_replace('/\D/', '', (string) $this->input('supplier_npwp'))
             : null;
@@ -56,9 +56,9 @@ class UpdateInvoiceRequest extends FormRequest
             ->filter(fn (mixed $item): bool => is_array($item) && array_filter($item, filled(...)) !== [])
             ->map(fn (array $item): array => [
                 'description' => $item['description'] ?? null,
-                'quantity' => $this->decimal($item['quantity'] ?? null),
-                'unit_price' => $this->money($item['unit_price'] ?? null),
-                'amount' => $this->money($item['amount'] ?? null),
+                'quantity' => $this->cleanDecimal($item['quantity'] ?? null),
+                'unit_price' => $this->cleanMoney($item['unit_price'] ?? null),
+                'amount' => $this->cleanMoney($item['amount'] ?? null),
             ])
             ->values()
             ->all();
@@ -81,19 +81,19 @@ class UpdateInvoiceRequest extends FormRequest
             'due_date' => $data['due_date'] ?? null,
             'line_items' => array_map(fn (array $item): array => [
                 'description' => $item['description'] ?? null,
-                'quantity' => $this->number($item['quantity'] ?? null),
-                'unit_price' => $this->integer($item['unit_price'] ?? null),
-                'amount' => $this->integer($item['amount'] ?? null),
+                'quantity' => $this->toNumber($item['quantity'] ?? null),
+                'unit_price' => $this->toInteger($item['unit_price'] ?? null),
+                'amount' => $this->toInteger($item['amount'] ?? null),
             ], $data['items'] ?? []),
-            'subtotal' => $this->integer($data['subtotal'] ?? null),
-            'tax_base' => $this->integer($data['tax_base'] ?? null),
+            'subtotal' => $this->toInteger($data['subtotal'] ?? null),
+            'tax_base' => $this->toInteger($data['tax_base'] ?? null),
             'tax_rate' => $data['tax_rate'] ?? null,
-            'tax_amount' => $this->integer($data['tax_amount'] ?? null),
-            'total' => $this->integer($data['total'] ?? null),
+            'tax_amount' => $this->toInteger($data['tax_amount'] ?? null),
+            'total' => $this->toInteger($data['total'] ?? null),
         ];
     }
 
-    private function money(mixed $value): ?string
+    private function cleanMoney(mixed $value): ?string
     {
         if (blank($value)) {
             return null;
@@ -105,17 +105,17 @@ class UpdateInvoiceRequest extends FormRequest
         return preg_replace('/,\d{1,2}$/', '', (string) $value);
     }
 
-    private function decimal(mixed $value): ?string
+    private function cleanDecimal(mixed $value): ?string
     {
         return blank($value) ? null : str_replace(',', '.', trim((string) $value));
     }
 
-    private function integer(mixed $value): ?int
+    private function toInteger(mixed $value): ?int
     {
         return $value === null ? null : (int) $value;
     }
 
-    private function number(mixed $value): int|float|null
+    private function toNumber(mixed $value): int|float|null
     {
         if ($value === null) {
             return null;
