@@ -25,15 +25,17 @@ return new class extends Migration
             $table->string('currency', 3)->default('IDR');
 
             // Rupiah has no minor unit in practice, so amounts are whole numbers.
-            $table->jsonb('line_items')->nullable();
+            // json rather than jsonb: nothing queries inside these columns, and
+            // jsonb would reorder the keys of every line item in the webhook payload.
+            $table->json('line_items')->nullable();
             $table->bigInteger('subtotal')->nullable();
             $table->bigInteger('tax_base')->nullable();
             $table->decimal('tax_rate', 5, 2)->nullable();
             $table->bigInteger('tax_amount')->nullable();
             $table->bigInteger('total')->nullable();
 
-            $table->jsonb('flags')->nullable();
-            $table->jsonb('raw_extraction')->nullable();
+            $table->json('flags')->nullable();
+            $table->json('raw_extraction')->nullable();
             $table->string('extracted_with')->nullable();
             $table->text('error')->nullable();
 
