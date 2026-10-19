@@ -15,7 +15,7 @@ That screenshot is a real run: `qwen3.5-9b` on Ollama read the sample PDF on the
 - A checker runs on the result and raises flags: line items that don't add up, PPN that doesn't match the rate, total that doesn't match, missing invoice number, bad NPWP length, and the same invoice number twice for one supplier.
 - Everything lands in a review queue. You fix the fields next to the original file and approve. Flagged invoices need a tick on "approve anyway".
 - Approving queues a webhook POST (retries with backoff, up to 6 tries). The body is signed with HMAC-SHA256 in `X-Invoice-Flow-Signature`, computed over `timestamp.body`. The timestamp is in `X-Invoice-Flow-Timestamp`. Receivers should check the signature and reject timestamps older than about 5 minutes.
-- "Export approved to CSV" writes all approved invoices to one file and marks them exported.
+- "Export approved to CSV" writes all approved invoices to one file and marks them exported. Import the NPWP column as text in Excel or Sheets, otherwise the leading zero (and the last digit of a 16-digit NPWP) gets lost.
 
 ## Stack
 
