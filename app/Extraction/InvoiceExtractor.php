@@ -44,7 +44,8 @@ class InvoiceExtractor
             ->withSchema(InvoiceSchema::make())
             ->withSystemPrompt(self::SYSTEM_PROMPT)
             ->withPrompt($prompt, $media)
-            ->usingTemperature(0)
+            // OpenAI's reasoning models reject anything but the default temperature.
+            ->usingTemperature($provider === 'openai' ? null : 0)
             ->withMaxTokens(4096)
             ->withClientOptions(['timeout' => (int) config('invoices.llm.timeout')])
             ->withProviderOptions($provider === 'ollama' ? ['num_ctx' => self::OLLAMA_CONTEXT] : [])
