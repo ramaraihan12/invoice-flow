@@ -1,0 +1,42 @@
+name: demo reset
+
+# Puts the public demo back: whatever visitors changed goes, and one invoice waits
+# for review again. There is no push or pull_request trigger on purpose, so a fork
+# or a PR cannot run this, and the job also checks where it is running.
+on:
+  schedule:
+    # 19:41 UTC is 02:41 in Jakarta, when nobody is looking at the demo.
+    - cron: '41 19 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: demo-reset
+  cancel-in-progress: false
+
+jobs:
+  reset:
+    if: github.repository == 'ramaraihan12/invoice-flow' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_pgsql
+          tools: composer:v2
+          coverage: none
+
+      - run: composer install --no-dev --no-interaction --prefer-dist --no-progress
+
+      # The connection string is only given to this step, not to the install above.
+      - run: php artisan db:seed --class=DemoSeeder --force
+        env:
+          DB_CONNECTION: pgsql
+          DB_URL: ${{ secrets.DEMO_DATABASE_URL }}
+          DEMO_MODE: 'true'
+          FILESYSTEM_DISK: database

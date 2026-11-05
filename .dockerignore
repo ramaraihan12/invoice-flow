@@ -15,6 +15,5 @@ storage/app/private/*
 bootstrap/cache/*.php
 tests
 docs
-samples
 Dockerfile
 docker-compose.yml

@@ -1,0 +1,90 @@
+# The public demo on Vercel's Container Runtime. Same build as the Dockerfile in
+# the repo root, but this image has to stand alone: nothing gets mounted, no
+# worker runs between requests and the disk doesn't last. Settings that aren't
+# secret go in here, the Vercel project only holds the secrets and PORT.
+FROM php:8.4-apache AS base
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libpq-dev libzip-dev unzip \
+    && docker-php-ext-install opcache pdo_pgsql zip \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
+COPY docker/php.vercel.ini "$PHP_INI_DIR/conf.d/invoice-flow.ini"
+
+# PORT has to match the one in the Vercel project, and INVOICE_WEBHOOK_URL below.
+# Not 80, because the container doesn't run as root. Apache's run files go in
+# /tmp, the one place that is certain to be writable, and it keeps no access log
+# because that would mean storing visitors' request headers.
+ENV APACHE_DOCUMENT_ROOT=/var/www/html/public \
+    PORT=8080 \
+    APACHE_RUN_DIR=/tmp/apache2 \
+    APACHE_LOCK_DIR=/tmp/apache2 \
+    APACHE_PID_FILE=/tmp/apache2/apache2.pid
+RUN sed -ri 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
+    && sed -ri 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf \
+    && sed -ri 's!^Listen 80$!Listen ${PORT}!' /etc/apache2/ports.conf \
+    && sed -ri 's!<VirtualHost \*:80>!<VirtualHost *:${PORT}>!' /etc/apache2/sites-available/000-default.conf \
+    && sed -ri '/CustomLog/d' /etc/apache2/sites-available/000-default.conf \
+    && echo 'ServerName localhost' > /etc/apache2/conf-available/servername.conf \
+    && a2enconf servername \
+    && a2disconf other-vhosts-access-log \
+    && a2enmod rewrite
+
+WORKDIR /var/www/html
+
+
+FROM base AS vendor
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --no-interaction --no-progress
+
+COPY . .
+RUN composer dump-autoload --optimize --no-dev --no-scripts \
+    && php artisan package:discover
+
+
+FROM node:24-alpine AS assets
+
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
+
+COPY vite.config.js ./
+COPY resources ./resources
+# Tailwind scans Laravel's pagination views for class names.
+COPY --from=vendor /var/www/html/vendor/laravel/framework/src/Illuminate/Pagination/resources/views ./vendor/laravel/framework/src/Illuminate/Pagination/resources/views
+RUN npm run build
+
+
+FROM base
+
+COPY --from=vendor --chown=www-data:www-data /var/www/html /var/www/html
+COPY --from=assets --chown=www-data:www-data /app/public/build /var/www/html/public/build
+
+ENV APP_NAME="Invoice Flow" \
+    APP_ENV=production \
+    APP_DEBUG=false \
+    DEMO_MODE=true \
+    DB_CONNECTION=pgsql \
+    LOG_CHANNEL=stderr \
+    LOG_LEVEL=warning \
+    SESSION_DRIVER=database \
+    SESSION_SECURE_COOKIE=true \
+    CACHE_STORE=database \
+    QUEUE_CONNECTION=sync \
+    FILESYSTEM_DISK=database \
+    VIEW_COMPILED_PATH=/tmp/views \
+    INVOICE_LLM_PROVIDER=gemini \
+    INVOICE_LLM_MODEL=gemini-2.5-flash \
+    INVOICE_LLM_VISION=true \
+    INVOICE_LLM_TIMEOUT=60 \
+    INVOICE_WEBHOOK_URL=http://127.0.0.1:8080/demo/webhook
+
+USER www-data
+EXPOSE 8080
+
+# Migrations and the seed run from outside, see the demo reset workflow. The
+# container never touches the schema at boot.
+CMD ["apache2-foreground"]

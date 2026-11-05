@@ -87,4 +87,5 @@ The tests use `Prism::fake()` and `Http::fake()`, so they need no model and no A
 - Scanned PDFs without a text layer are rejected with a clear message. Send them as photos to a vision model instead, there is no OCR step.
 - Currency is assumed to be IDR and amounts are whole rupiah.
 - No login. It is meant to run on a private network. Add auth before putting it on the internet.
+- The live demo is `Dockerfile.vercel` with `DEMO_MODE=true`, which is off by default. With no worker and no lasting disk on that host, reads and webhooks run inside the request and files go in Postgres through a small `database` disk. Strangers share one free Gemini key, so uploads are capped at one file of 2 MB and 3 pages, and reads are limited per IP and per day for everyone, counted in Postgres. The webhook target is fixed and runs in the same container, a visitor can't set it. `demo-reset.yml` wipes the data every night.
 - Next: a Tesseract fallback for scanned PDFs, and per-supplier rules for known layouts.
