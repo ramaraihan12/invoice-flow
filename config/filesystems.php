@@ -47,6 +47,13 @@ return [
             'report' => false,
         ],
 
+        // For hosts with no lasting disk, see App\Filesystem\DatabaseAdapter.
+        'database' => [
+            'driver' => 'database',
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),
