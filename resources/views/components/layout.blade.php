@@ -17,7 +17,7 @@
     @if (config('invoices.demo.enabled'))
         <div class="border-b border-amber-200 bg-amber-50 text-sm text-amber-900">
             <p class="mx-auto max-w-7xl px-4 py-2 sm:px-6">
-                Public demo. Every visitor sees the same invoices and everything is wiped daily, so don't upload anything real.
+                Public demo. Every visitor sees the same invoices and everything is wiped daily. Uploads are off here, they work when you <a href="https://github.com/ramaraihan12/invoice-flow#run-it" class="underline">run it yourself</a>.
             </p>
         </div>
     @endif

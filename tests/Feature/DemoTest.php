@@ -5,9 +5,7 @@ use App\Models\DemoWebhookReceipt;
 use App\Models\Invoice;
 use App\Models\WebhookDelivery;
 use Database\Seeders\DemoSeeder;
-use Dompdf\Dompdf;
 use Illuminate\Http\Client\Request;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -47,26 +45,6 @@ function geminiReply(): array
     ];
 }
 
-function pdfWithPages(int $pages): UploadedFile
-{
-    $dompdf = new Dompdf;
-    $dompdf->loadHtml(str_repeat('<div style="page-break-after: always">Faktur nomor 1 untuk pelanggan yang terhormat</div>', $pages));
-    $dompdf->render();
-
-    $path = tempnam(sys_get_temp_dir(), 'demo');
-    file_put_contents($path, $dompdf->output());
-
-    return new UploadedFile($path, 'many-pages.pdf', 'application/pdf', test: true);
-}
-
-function realFile(string $name, string $contents): UploadedFile
-{
-    $path = tempnam(sys_get_temp_dir(), 'demo');
-    file_put_contents($path, $contents);
-
-    return new UploadedFile($path, $name, 'application/pdf', test: true);
-}
-
 function signedDelivery(string $body, ?int $timestamp = null, string $secret = 'demo-secret'): array
 {
     $timestamp ??= now()->getTimestamp();
@@ -97,11 +75,26 @@ describe('with the flag off', function () {
         Queue::fake();
 
         foreach (range(1, 8) as $i) {
-            $this->post('/invoices', ['files' => [realFile('a.pdf', (string) file_get_contents(base_path('samples/01-sinar-kemas-abadi.pdf')))]])
-                ->assertRedirect('/invoices');
+            $this->post('/invoices', ['files' => [samplePdf()]])->assertRedirect('/invoices');
         }
 
         expect(DB::table('demo_quota_hits')->count())->toBe(0);
+    });
+
+    it('keeps the upload form and takes uploads', function () {
+        Storage::fake();
+        Queue::fake();
+
+        $this->get('/invoices/upload')->assertOk()
+            ->assertSee('Up to 20 files at once')
+            ->assertSee('type="file"', false)
+            ->assertDontSee('Uploads are off');
+
+        $this->get('/invoices')->assertSee('Upload invoices');
+
+        $this->post('/invoices', ['files' => [samplePdf()]])->assertRedirect('/invoices');
+
+        expect(Invoice::count())->toBe(1);
     });
 
     it('refuses to run the seeder, it would wipe real invoices', function () {
@@ -205,42 +198,52 @@ describe('with the flag on', function () {
         Http::assertSentCount(1);
     });
 
-    it('reads an upload inside the request', function () {
-        fakeModel();
+    it('reads the image sample with the vision model', function () {
+        $prism = fakeModel();
 
-        $this->post('/invoices', ['files' => [realFile('mine.pdf', (string) file_get_contents(base_path('samples/02-mitra-teknik-mandiri.pdf')))]])
-            ->assertRedirect('/invoices/'.Invoice::sole()->id);
+        $this->post('/demo/samples', ['sample' => '05-mitra-teknik-mandiri-foto.png'])->assertRedirect();
 
-        expect(Invoice::sole()->status)->toBe(InvoiceStatus::NeedsReview);
+        $invoice = Invoice::sole();
+
+        expect($invoice->status)->toBe(InvoiceStatus::NeedsReview)
+            ->and($invoice->mime_type)->toBe('image/png')
+            ->and($invoice->file_path)->toEndWith('.png')
+            ->and($invoice->source_text)->toBeNull();
+
+        Storage::assertExists($invoice->file_path);
+
+        $prism->assertRequest(fn (array $requests) => expect($requests[0]->messages()[0]->images())->toHaveCount(1));
     });
 
-    it('turns away uploads over the limits before the model is called', function (Closure $files, string $message) {
+    it('has every sample it offers', function () {
+        foreach (array_keys(config('invoices.demo.samples')) as $file) {
+            expect(base_path("samples/{$file}"))->toBeFile();
+        }
+    });
+
+    it('refuses an upload posted straight to the route, and keeps nothing of it', function () {
         $prism = fakeModel();
 
-        $this->post('/invoices', ['files' => $files()])->assertSessionHasErrors();
+        $this->post('/invoices', ['files' => [samplePdf()]])
+            ->assertForbidden()
+            ->assertSee('Uploads are off in this public demo');
 
-        expect(session('errors')->first())->toContain($message)
-            ->and(Invoice::count())->toBe(0)
-            ->and(DB::table('demo_quota_hits')->where('bucket', 'all:day')->exists())->toBeFalse();
+        expect(Invoice::count())->toBe(0)
+            ->and(Storage::allFiles())->toBe([])
+            ->and(DB::table('demo_quota_hits')->count())->toBe(0);
 
         $prism->assertCallCount(0);
-    })->with([
-        'too big' => [fn () => [UploadedFile::fake()->create('big.pdf', 2049, 'application/pdf')], 'Files can be 2 MB at most.'],
-        'two files' => [fn () => [samplePdf(), samplePdf('02-mitra-teknik-mandiri.pdf')], 'One file at a time'],
-        'too many pages' => [fn () => [pdfWithPages(4)], 'This PDF has 4 pages'],
-        'html renamed to pdf' => [fn () => [realFile('invoice.pdf', '<html><script>alert(1)</script></html>')], 'Only PDF, JPG, PNG and WebP'],
-        'broken pdf' => [fn () => [realFile('invoice.pdf', "%PDF-1.7\nnot really a pdf at all, just a header and then some words")], 'Could not read this PDF'],
-        'scan' => [fn () => [new UploadedFile(base_path('tests/fixtures/scan.pdf'), 'scan.pdf', 'application/pdf', test: true)], 'no text layer'],
-    ]);
+    });
 
-    it('turns away a pdf with more text than the model should get', function () {
-        config(['invoices.demo.max_pdf_chars' => 100]);
-        $prism = fakeModel();
+    it('says uploads are off instead of showing the form', function () {
+        $this->get('/invoices/upload')->assertOk()
+            ->assertSee('Uploads are off in this demo')
+            ->assertSee('run it yourself')
+            ->assertSee('Try a sample invoice')
+            ->assertDontSee('type="file"', false)
+            ->assertDontSee('action="'.route('invoices.store').'"', false);
 
-        $this->post('/invoices', ['files' => [samplePdf()]])->assertSessionHasErrors();
-
-        expect(session('errors')->first())->toContain('more text than the demo sends');
-        $prism->assertCallCount(0);
+        $this->get('/invoices')->assertOk()->assertDontSee('Upload invoices');
     });
 
     it('limits each visitor per minute, by the address vercel reports', function () {
@@ -306,7 +309,6 @@ describe('with the flag on', function () {
     });
 
     it('does not spend the total on what a visitor gets refused for', function () {
-        $this->post('/invoices', ['files' => [realFile('invoice.pdf', 'junk')]])->assertSessionHasErrors();
         $this->post('/demo/samples', ['sample' => 'nope.pdf'])->assertSessionHasErrors();
 
         expect(DB::table('demo_quota_hits')->where('bucket', 'all:day')->exists())->toBeFalse();

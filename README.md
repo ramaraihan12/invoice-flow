@@ -4,7 +4,7 @@
 
 Upload a supplier invoice (PDF or photo), let an LLM pull the fields out, and have a person check anything that looks off before it goes to accounting. Built around Indonesian invoices: rupiah amounts, supplier NPWP, PPN, jatuh tempo.
 
-**Live demo:** https://invoice-flow-three-henna.vercel.app, no login. Click a sample invoice and Gemini reads it in under ten seconds. The CV Mitra Teknik Mandiri one has the wrong line total, so it lands in review with the line highlighted. Approve it and the Webhook page shows the signed payload that arrived. Everyone shares the same invoices and the data is wiped every night, so don't upload anything real. It all runs on one free Gemini key, so uploads are small and reads are limited per visitor and per day. The container starts on the first request and stops about 30 seconds after the last one, and the free database sleeps when idle, so the first page after a quiet spell can take up to ten seconds.
+**Live demo:** https://invoice-flow-three-henna.vercel.app, no login. Click a sample invoice and Gemini reads it in about ten seconds. The CV Mitra Teknik Mandiri one has the wrong line total, so it lands in review with the line highlighted, and it is there as an image too, for the vision model. Approve it and the Webhook page shows the signed payload that arrived. Uploads are off in the demo: with no login, anything uploaded would be visible to everyone, so they only work when you run it yourself. Everyone shares the same invoices and the data is wiped every night. It all runs on one free Gemini key, so reads are limited per visitor and per day. The container starts on the first request and stops about 30 seconds after the last one, and the free database sleeps when idle, so the first page after a quiet spell can take up to ten seconds.
 
 ![Review screen](docs/review.png)
 
@@ -72,7 +72,7 @@ docker compose up --build
 
 The app is on http://localhost:8000. If your Ollama is somewhere else, set `DOCKER_OLLAMA_URL`.
 
-The sample PDFs were made with `php artisan samples:generate`. All companies and numbers in them are made up. Two have deliberate mistakes and one is a resend of another, so each check has something to catch.
+The sample PDFs were made with `php artisan samples:generate`. All companies and numbers in them are made up. Two have deliberate mistakes and one is a resend of another, so each check has something to catch. `05-mitra-teknik-mandiri-foto.png` is the second one as an image, for a model that can read photos.
 
 ## Tests
 
@@ -89,5 +89,5 @@ The tests use `Prism::fake()` and `Http::fake()`, so they need no model and no A
 - Scanned PDFs without a text layer are rejected with a clear message. Send them as photos to a vision model instead, there is no OCR step.
 - Currency is assumed to be IDR and amounts are whole rupiah.
 - No login. It is meant to run on a private network. Add auth before putting it on the internet.
-- The live demo is `Dockerfile.vercel` with `DEMO_MODE=true`, which is off by default. With no worker and no lasting disk on that host, reads and webhooks run inside the request and files go in Postgres through a small `database` disk. Strangers share one free Gemini key, so uploads are capped at one file of 2 MB and 3 pages, and reads are limited per IP and per day for everyone, counted in Postgres. The webhook target is fixed and runs in the same container, a visitor can't set it. `demo-reset.yml` wipes the data every night.
+- The live demo is `Dockerfile.vercel` with `DEMO_MODE=true`, which is off by default. With no worker and no lasting disk on that host, reads and webhooks run inside the request and files go in Postgres through a small `database` disk. There is no login there, so `POST /invoices` is refused and the samples are the way in. Strangers share one free Gemini key, so reads are limited per IP and per day for everyone, counted in Postgres. The webhook target is fixed and runs in the same container, a visitor can't set it. `demo-reset.yml` wipes the data every night.
 - Next: a Tesseract fallback for scanned PDFs, and per-supplier rules for known layouts.

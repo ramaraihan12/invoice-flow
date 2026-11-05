@@ -1,23 +1,21 @@
 <x-layout title="Upload">
-    @php
-        $demo = config('invoices.demo.enabled');
-        $maxKb = config('invoices.demo.max_file_kb');
-    @endphp
+    @if (config('invoices.demo.enabled'))
+        <div class="mb-5 max-w-2xl">
+            <h1 class="text-xl font-semibold text-slate-900">Uploads are off in this demo</h1>
+            <p class="mt-1 text-sm text-slate-500">
+                There is no login, so anything uploaded here would be visible to every visitor. Uploads work when you <a href="https://github.com/ramaraihan12/invoice-flow#run-it" class="underline">run it yourself</a>. The samples go through the same steps, and one of them is an image.
+            </p>
+        </div>
 
-    <div class="mx-auto max-w-2xl">
         <x-demo-samples />
-
+    @else
+    <div class="mx-auto max-w-2xl">
         <h1 class="text-xl font-semibold text-slate-900">Upload invoices</h1>
         <p class="mt-1 text-sm text-slate-500">
-            @if ($demo)
-                One file at a time, up to {{ $maxKb / 1024 }} MB and {{ config('invoices.demo.max_pdf_pages') }} pages. It is read while you wait, then opens for review. Other visitors can see it until the next reset.
-            @else
-                Up to 20 files at once, 10 MB each. Each one is read by the model in the background and lands in the review queue.
-            @endif
+            Up to 20 files at once, 10 MB each. Each one is read by the model in the background and lands in the review queue.
         </p>
 
-        <form method="POST" action="{{ route('invoices.store') }}" enctype="multipart/form-data" class="mt-6" data-upload
-            @if ($demo) data-reading data-max-bytes="{{ $maxKb * 1024 }}" @endif>
+        <form method="POST" action="{{ route('invoices.store') }}" enctype="multipart/form-data" class="mt-6" data-upload>
             @csrf
 
             <label for="files" class="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-300 bg-white px-6 py-12 text-center transition hover:border-slate-400" data-dropzone>
@@ -28,7 +26,7 @@
                 <span class="mt-1 text-xs text-slate-500">
                     PDF{{ $acceptsPhotos ? ', JPG, PNG or WebP' : '' }}
                 </span>
-                <input id="files" type="file" name="files[]" @unless ($demo) multiple @endunless class="sr-only"
+                <input id="files" type="file" name="files[]" multiple class="sr-only"
                     accept="{{ $acceptsPhotos ? '.pdf,.jpg,.jpeg,.png,.webp' : '.pdf' }}">
             </label>
 
@@ -55,4 +53,5 @@
             </div>
         </form>
     </div>
+    @endif
 </x-layout>

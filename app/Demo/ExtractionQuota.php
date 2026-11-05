@@ -18,7 +18,7 @@ class ExtractionQuota
     private const DAY = 86_400;
 
     /**
-     * Counted before the request is validated, so junk uploads can't keep a
+     * Counted before the request is validated, so junk requests can't keep a
      * container busy either.
      */
     public function hitClient(Request $request): void
@@ -87,7 +87,7 @@ class ExtractionQuota
 
     /**
      * The daily reset normally gets there first. This covers the case where it
-     * stops running, so uploads can't fill the free database.
+     * stops running, so old rows can't pile up in the free database.
      */
     private function prune(): void
     {

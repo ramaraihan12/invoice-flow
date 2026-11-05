@@ -11,6 +11,7 @@ use App\Jobs\DeliverWebhook;
 use App\Jobs\ProcessInvoice;
 use App\Models\Invoice;
 use App\Models\WebhookDelivery;
+use Illuminate\Http\File;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -64,25 +65,19 @@ class InvoiceController extends Controller
         ]);
     }
 
-    public function store(StoreInvoicesRequest $request, ExtractionQuota $quota): RedirectResponse
+    public function store(StoreInvoicesRequest $request): RedirectResponse
     {
-        $quota->hitShared();
-
         $files = $request->uploadedFiles();
 
         foreach ($files as $file) {
             $invoice = Invoice::create([
                 'status' => InvoiceStatus::Processing,
-                'original_name' => mb_substr($file->getClientOriginalName(), 0, 255),
+                'original_name' => $file->getClientOriginalName(),
                 'file_path' => $file->store('invoices'),
                 'mime_type' => $file->getMimeType(),
             ]);
 
-            $this->read($invoice);
-        }
-
-        if (config('invoices.demo.enabled')) {
-            return $this->afterReading($invoice);
+            ProcessInvoice::dispatch($invoice);
         }
 
         return to_route('invoices.index')
@@ -90,8 +85,8 @@ class InvoiceController extends Controller
     }
 
     /**
-     * The demo's one-click way in. Only names from the config get this far, so
-     * a visitor can't point it at any other file.
+     * The demo's only way in, uploads are refused there. Only names from the
+     * config get this far, so a visitor can't point it at any other file.
      */
     public function storeSample(Request $request, ExtractionQuota $quota): RedirectResponse
     {
@@ -101,14 +96,13 @@ class InvoiceController extends Controller
 
         $quota->hitShared();
 
-        $path = 'invoices/'.Str::random(40).'.pdf';
-        Storage::put($path, (string) file_get_contents(base_path("samples/{$name}")));
+        $file = new File(base_path("samples/{$name}"));
 
         $invoice = Invoice::create([
             'status' => InvoiceStatus::Processing,
             'original_name' => $name,
-            'file_path' => $path,
-            'mime_type' => 'application/pdf',
+            'file_path' => Storage::putFile('invoices', $file),
+            'mime_type' => $file->getMimeType(),
         ]);
 
         $this->read($invoice);
@@ -234,7 +228,6 @@ class InvoiceController extends Controller
 
         return Storage::response($invoice->file_path, $invoice->original_name, [
             'Content-Type' => $invoice->mime_type,
-            'X-Content-Type-Options' => 'nosniff',
         ], 'inline');
     }
 

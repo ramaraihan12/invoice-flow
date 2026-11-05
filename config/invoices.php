@@ -24,18 +24,13 @@ return [
     ],
 
     // The public demo: strangers, one shared free model key, a host with no
-    // worker and no disk. Off everywhere else, and nothing here applies then.
+    // worker and no disk. Uploads are refused there, the samples are the way in.
+    // Off everywhere else, and nothing here applies then.
     'demo' => [
         'enabled' => (bool) env('DEMO_MODE', false),
 
-        // Well under the 4.5 MB Vercel takes in a request. Stored in Postgres,
-        // where the free plan has 1 GB.
-        'max_file_kb' => 2048,
-        'max_pdf_pages' => 3,
-        'max_pdf_chars' => 12000,
-
-        // Every extraction is a model call. The sample invoices need four to
-        // try them all, so the per-minute limit leaves room for that.
+        // Every extraction is a model call. The per-minute limit leaves just
+        // enough room to try all the samples.
         'limits' => [
             'ip_minute' => 5,
             'ip_day' => 12,
@@ -47,6 +42,7 @@ return [
             '02-mitra-teknik-mandiri.pdf' => ['title' => 'CV Mitra Teknik Mandiri', 'hint' => 'A line total that is not 3 x 1.450.000'],
             '03-higienis-prima.pdf' => ['title' => 'PT Higienis Prima Sejahtera', 'hint' => 'PPN that does not match the rate'],
             '04-sinar-kemas-abadi-resend.pdf' => ['title' => 'PT Sinar Kemas Abadi, again', 'hint' => 'A resend, caught as a duplicate of the first one'],
+            '05-mitra-teknik-mandiri-foto.png' => ['title' => 'CV Mitra Teknik Mandiri, as an image', 'hint' => 'No text layer, the vision model reads this one'],
         ],
     ],
 

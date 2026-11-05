@@ -3,7 +3,7 @@
         <h2 class="font-medium text-slate-900">Try a sample invoice</h2>
         <p class="text-sm text-slate-500">One click sends a made-up invoice to the model. It takes a few seconds, then opens for review.</p>
 
-        <div class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
             @foreach (config('invoices.demo.samples') as $file => $sample)
                 <form method="POST" action="{{ route('demo.samples') }}" data-reading>
                     @csrf

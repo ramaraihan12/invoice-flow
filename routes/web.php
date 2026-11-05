@@ -5,6 +5,7 @@ use App\Http\Controllers\ExportController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Middleware\DemoOnly;
 use App\Http\Middleware\LimitExtractions;
+use App\Http\Middleware\NoUploadsOnDemo;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [InvoiceController::class, 'home'])->name('home');
@@ -12,7 +13,7 @@ Route::get('/', [InvoiceController::class, 'home'])->name('home');
 Route::controller(InvoiceController::class)->group(function () {
     Route::get('/invoices', 'index')->name('invoices.index');
     Route::get('/invoices/upload', 'create')->name('invoices.create');
-    Route::post('/invoices', 'store')->middleware(LimitExtractions::class)->name('invoices.store');
+    Route::post('/invoices', 'store')->middleware(NoUploadsOnDemo::class)->name('invoices.store');
     Route::get('/invoices/{invoice}', 'show')->name('invoices.show');
     Route::put('/invoices/{invoice}', 'update')->name('invoices.update');
     Route::post('/invoices/{invoice}/approve', 'approve')->name('invoices.approve');

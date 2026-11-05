@@ -2,8 +2,6 @@
 
 namespace App\Http\Requests;
 
-use App\Extraction\DocumentReader;
-use App\Extraction\ExtractionFailed;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Validation\Validator;
@@ -16,8 +14,8 @@ class StoreInvoicesRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'files' => ['required', 'array', 'max:'.(config('invoices.demo.enabled') ? 1 : 20)],
-            'files.*' => ['file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:'.$this->maxKilobytes()],
+            'files' => ['required', 'array', 'max:20'],
+            'files.*' => ['file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:10240'],
         ];
     }
 
@@ -38,25 +36,6 @@ class StoreInvoicesRequest extends FormRequest
                     }
                 }
             },
-            function (Validator $validator): void {
-                if (! config('invoices.demo.enabled') || $validator->errors()->isNotEmpty()) {
-                    return;
-                }
-
-                // The job checks this too. Doing it here as well means a PDF
-                // that can't pass leaves no row and spends nothing shared.
-                foreach ($this->uploadedFiles() as $i => $file) {
-                    if ($file->getMimeType() !== 'application/pdf') {
-                        continue;
-                    }
-
-                    try {
-                        app(DocumentReader::class)->pdfText($file->getContent());
-                    } catch (ExtractionFailed $e) {
-                        $validator->errors()->add("files.{$i}", $e->getMessage());
-                    }
-                }
-            },
         ];
     }
 
@@ -68,8 +47,7 @@ class StoreInvoicesRequest extends FormRequest
         return [
             'files.required' => 'Pick at least one invoice.',
             'files.*.mimes' => 'Only PDF, JPG, PNG and WebP files are supported.',
-            'files.*.max' => 'Files can be '.($this->maxKilobytes() / 1024).' MB at most.',
-            ...(config('invoices.demo.enabled') ? ['files.max' => 'One file at a time on this demo.'] : []),
+            'files.*.max' => 'Files can be 10 MB at most.',
         ];
     }
 
@@ -79,10 +57,5 @@ class StoreInvoicesRequest extends FormRequest
     public function uploadedFiles(): array
     {
         return array_filter((array) $this->file('files'), fn (mixed $file): bool => $file instanceof UploadedFile);
-    }
-
-    private function maxKilobytes(): int
-    {
-        return config('invoices.demo.enabled') ? (int) config('invoices.demo.max_file_kb') : 10240;
     }
 }
