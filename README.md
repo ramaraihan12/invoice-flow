@@ -4,7 +4,7 @@
 
 Upload a supplier invoice (PDF or photo), let an LLM pull the fields out, and have a person check anything that looks off before it goes to accounting. Built around Indonesian invoices: rupiah amounts, supplier NPWP, PPN, jatuh tempo.
 
-**Live demo:** https://invoice-flow-three-henna.vercel.app, no login. Click a sample invoice and Gemini reads it in under ten seconds. The CV Mitra Teknik Mandiri one has the wrong line total, so it lands in review with the line highlighted. Approve it and the Webhook page shows the signed payload that arrived. Everyone shares the same invoices and the data is wiped every night, so don't upload anything real. It all runs on one free Gemini key, so uploads are small and reads are limited per visitor and per day. The container starts on the first request and stops about 30 seconds after the last one, and the free database sleeps when idle, so the first page after a quiet spell takes a few seconds longer.
+**Live demo:** https://invoice-flow-three-henna.vercel.app, no login. Click a sample invoice and Gemini reads it in under ten seconds. The CV Mitra Teknik Mandiri one has the wrong line total, so it lands in review with the line highlighted. Approve it and the Webhook page shows the signed payload that arrived. Everyone shares the same invoices and the data is wiped every night, so don't upload anything real. It all runs on one free Gemini key, so uploads are small and reads are limited per visitor and per day. The container starts on the first request and stops about 30 seconds after the last one, and the free database sleeps when idle, so the first page after a quiet spell can take up to ten seconds.
 
 ![Review screen](docs/review.png)
 
