@@ -15,7 +15,7 @@
     <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
             <h1 class="text-xl font-semibold text-slate-900">Invoices</h1>
-            <p class="text-sm text-slate-500">Uploads are read in the background. Anything that doesn't add up is flagged for review.</p>
+            <p class="text-sm text-slate-500">{{ config('invoices.demo.enabled') ? 'An LLM reads each invoice, plain code checks the math, PPN and NPWP, and a person approves it.' : 'Uploads are read in the background.' }} Anything that doesn't add up is flagged for review.</p>
         </div>
         <div class="flex items-center gap-2">
             <form method="POST" action="{{ route('exports.store') }}">
@@ -28,6 +28,8 @@
             <a href="{{ route('invoices.create') }}" class="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white shadow-xs hover:bg-slate-700">Upload invoices</a>
         </div>
     </div>
+
+    <x-demo-samples />
 
     <div @class(['mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4', 'lg:grid-cols-5' => count($tabs) === 5])>
         @foreach ($tabs as $tab)
@@ -50,6 +52,8 @@
                 <p class="mt-1 text-sm text-slate-500">
                     @if ($status)
                         <a href="{{ route('invoices.index') }}" class="underline">Show all invoices</a>
+                    @elseif (config('invoices.demo.enabled'))
+                        Pick a sample above to get started.
                     @else
                         <a href="{{ route('invoices.create') }}" class="underline">Upload a PDF</a> to get started. There are a few fictional ones in <code class="text-xs">samples/</code>.
                     @endif

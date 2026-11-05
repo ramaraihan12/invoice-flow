@@ -78,7 +78,7 @@
                 <div class="rounded-lg border border-rose-200 bg-rose-50 px-5 py-5">
                     <p class="font-medium text-rose-900">Couldn't read this invoice</p>
                     <p class="mt-1 text-sm text-rose-800">{{ $invoice->error }}</p>
-                    <form method="POST" action="{{ route('invoices.retry', $invoice) }}" class="mt-4">
+                    <form method="POST" action="{{ route('invoices.retry', $invoice) }}" class="mt-4" @if (config('invoices.demo.enabled')) data-reading @endif>
                         @csrf
                         <button type="submit" class="rounded-md bg-rose-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-rose-600">Try again</button>
                     </form>
@@ -232,6 +232,9 @@
                                 </li>
                             @endforeach
                         </ul>
+                        @if (config('invoices.demo.enabled'))
+                            <a href="{{ route('demo.webhook') }}" class="mt-1 inline-block text-sm font-medium text-slate-700 underline">See the signed payload the receiver got</a>
+                        @endif
                     </div>
                 @endif
 

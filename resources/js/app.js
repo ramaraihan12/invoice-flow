@@ -64,4 +64,30 @@ if (upload) {
         input.files = event.dataTransfer.files;
         showFiles();
     });
+
+    // Past the host's own body limit a visitor would get a bare error page.
+    const maxBytes = Number(upload.dataset.maxBytes);
+
+    upload.addEventListener('submit', (event) => {
+        if (maxBytes && Array.from(input.files).some((file) => file.size > maxBytes)) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+
+            const li = document.createElement('li');
+            li.className = 'text-rose-700';
+            li.textContent = `Files can be ${maxBytes / 1024 / 1024} MB at most.`;
+            list.replaceChildren(li);
+        }
+    });
 }
+
+// On the demo an invoice is read inside the request, so say so while the browser waits.
+document.querySelectorAll('form[data-reading]').forEach((form) => {
+    form.addEventListener('submit', () => {
+        document.querySelectorAll('form[data-reading] button').forEach((button) => {
+            button.disabled = true;
+        });
+
+        form.querySelector('button').textContent = 'Reading, this takes a few seconds...';
+    });
+});

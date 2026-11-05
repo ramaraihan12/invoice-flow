@@ -2,7 +2,9 @@
 
 namespace App\Extraction;
 
+use Illuminate\Http\Client\RequestException;
 use Prism\Prism\Facades\Prism;
+use Throwable;
 
 class InvoiceExtractor
 {
@@ -30,6 +32,8 @@ class InvoiceExtractor
     // otherwise allocate its server default, which can be 32k tokens of VRAM.
     private const OLLAMA_CONTEXT = 8192;
 
+    private const DEMO_RETRY_MILLISECONDS = [1500, 3000];
+
     public function extract(InvoiceDocument $document): ExtractionResult
     {
         $provider = (string) config('invoices.llm.provider');
@@ -39,7 +43,7 @@ class InvoiceExtractor
             ? ['Extract the data from this invoice photo.', [$document->image]]
             : ["Extract the data from this invoice text:\n\n".$document->text, []];
 
-        $response = Prism::structured()
+        $request = Prism::structured()
             ->using($provider, $model)
             ->withSchema(InvoiceSchema::make())
             ->withSystemPrompt(self::SYSTEM_PROMPT)
@@ -48,8 +52,19 @@ class InvoiceExtractor
             ->usingTemperature($provider === 'openai' ? null : 0)
             ->withMaxTokens(4096)
             ->withClientOptions(['timeout' => (int) config('invoices.llm.timeout')])
-            ->withProviderOptions($provider === 'ollama' ? ['num_ctx' => self::OLLAMA_CONTEXT] : [])
-            ->asStructured();
+            ->withProviderOptions($provider === 'ollama' ? ['num_ctx' => self::OLLAMA_CONTEXT] : []);
+
+        // The queue's retry doesn't exist when the job runs inside a request, and
+        // Gemini's free tier answers 503 now and then. Only that is worth waiting
+        // for: a 429 would only spend more of the quota it just ran out of.
+        if (config('invoices.demo.enabled')) {
+            $request->withClientRetry(
+                self::DEMO_RETRY_MILLISECONDS,
+                when: fn (Throwable $e): bool => $e instanceof RequestException && $e->response->status() === 503,
+            );
+        }
+
+        $response = $request->asStructured();
 
         if ($response->structured === []) {
             throw new ExtractionFailed("The model stopped before returning any data ({$response->finishReason->name}).");

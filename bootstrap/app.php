@@ -11,7 +11,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Authenticated by its signature. The route is a 404 outside the demo.
+        $middleware->validateCsrfTokens(except: ['demo/webhook']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

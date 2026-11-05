@@ -55,7 +55,11 @@ class ProcessInvoice implements ShouldQueue
 
     public function failed(?Throwable $e): void
     {
-        $this->markFailed($e?->getMessage() ?? 'Extraction failed.');
+        // Strangers read this on the demo, and a raw message can quote the
+        // provider's reply or a whole SQL statement. The log keeps the detail.
+        $this->markFailed(config('invoices.demo.enabled')
+            ? 'The model could not read this one just now. Try again in a minute.'
+            : ($e?->getMessage() ?? 'Extraction failed.'));
     }
 
     private function markFailed(string $message): void
