@@ -34,6 +34,8 @@ jobs:
       - run: composer install --no-dev --no-interaction --prefer-dist --no-progress
 
       # The connection string is only given to this step, not to the install above.
+      # It has to be Neon's direct one: this runner's libpq is older than 17, and
+      # through the pooler the reset's transaction aborts after the first statement.
       - run: php artisan db:seed --class=DemoSeeder --force
         env:
           DB_CONNECTION: pgsql

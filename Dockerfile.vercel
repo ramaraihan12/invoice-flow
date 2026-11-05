@@ -4,6 +4,9 @@
 # secret go in here, the Vercel project only holds the secrets and PORT.
 FROM php:8.4-apache AS base
 
+# Debian's libpq has to stay at 17 or newer. Older ones drop prepared statements
+# with plain SQL, which Neon's pooler can't map, and that silently aborts the
+# transaction they run in.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libpq-dev libzip-dev unzip \
     && docker-php-ext-install opcache pdo_pgsql zip \
